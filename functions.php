@@ -159,6 +159,13 @@ function cxense_analytics_script() {
  * @return mixed
  */
 function cxense_get_opt($name) {
+
+    $locale = cxense_get_current_locale();
+
+    if($locale !== null) {
+        $name = '_' . $locale;
+    }
+
     if( $opt = get_option($name) ) {
         return $opt;
     } else {
@@ -223,19 +230,61 @@ function cxense_search($query, $args) {
  * @return array
  */
 function cxense_get_settings() {
-    return array(
-        array('name'=>'cxense_site_id', 'title' => 'Site ID'),
-        array('name'=>'cxense_user_name', 'title' => 'User name'),
-        array('name'=>'cxense_api_key', 'title' => 'API Key'),
-        array('name'=>'cxense_generate_og_tags', 'title' => 'Generate og-tags', 'select'=>array('yes' => 'Yes', 'no' => 'No')),
-        array('name'=>'cxense_add_analytics_script', 'title' => 'Add analytics script', 'select'=>array('yes' => 'Yes', 'no' => 'No')),
-        array('name'=>'cxense_recommendable_post_types', 'title' => 'Recommendable post types (comma separated)'),
-        array('name'=>'cxense_default_site_desc', 'title' => 'The default website description used in og:description'),
-        array('name'=>'cxense_default_og_image', 'title' => 'URL to default og:image'),
-        array('name'=>'cxense_org_prefix', 'title' => 'Organisation prefix'),
-        array('name'=>'cxense_user_products', 'title' => 'Paywall user products (comma separated string)'),
-        array('name'=>'cxense_widgets_options', 'title' => 'cxense_widgets_options', 'add_field' => false)
-    );
+
+    $baseSettings = [
+        [
+            'name' => 'cxense_site_id', 'title' => 'Site ID'
+        ],
+        [
+            'name' => 'cxense_user_name', 'title' => 'User name'
+        ],
+        [
+            'name' => 'cxense_api_key', 'title' => 'API Key'
+        ],
+        [
+            'name'=>'cxense_generate_og_tags', 'title' => 'Generate og-tags', 'select '=> ['yes' => 'Yes', 'no' => 'No']
+        ],
+        [
+            'name' => 'cxense_add_analytics_script', 'title' => 'Add analytics script', 'select' => ['yes' => 'Yes', 'no' => 'No']
+        ],
+        [
+            'name' => 'cxense_recommendable_post_types', 'title' => 'Recommendable post types (comma separated)'
+        ],
+        [
+            'name' => 'cxense_default_site_desc', 'title' => 'The default website description used in og:description'
+        ],
+        [
+            'name' => 'cxense_default_og_image', 'title' => 'URL to default og:image'
+        ],
+        [
+            'name' => 'cxense_org_prefix', 'title' => 'Organisation prefix'
+        ],
+        [
+            'name' => 'cxense_user_products', 'title' => 'Paywall user products (comma separated string)'
+        ],
+        [
+            'name' => 'cxense_widgets_options', 'title' => 'cxense_widgets_options', 'add_field' => false
+        ],
+    ];
+
+
+    if (cxense_languages_is_enabled()) { // Languages are enabled we must alter settings keys to include languages
+
+        $localizedSettings = [];
+
+        foreach (cxense_get_languages() as $language) {
+            foreach ($baseSettings as $baseSetting) { // Append locale to base settings
+                $baseSetting['name'] .= '_' . $language->locale;
+                $baseSetting['title'] .= ' ' . $language->locale;
+                $localizedSettings[] = $baseSetting;
+            }
+        }
+
+        return $localizedSettings;
+
+    } else {
+        return $baseSettings;
+    }
 }
 
 /**
@@ -284,6 +333,53 @@ function cxense_register_settings() {
 function cxense_remove_all_settings() {
     foreach(cxense_get_settings() as $setting)
         delete_option($setting['name']);
+}
+
+
+/**
+ * Check if languages are enabled
+ *
+ * @return bool
+ */
+function cxense_languages_is_enabled()
+{
+    return function_exists('Pll') && PLL()->model->get_languages_list();
+}
+
+/**
+ * Get all available languages
+ *
+ * @return bool
+ */
+function cxense_get_languages()
+{
+    if (cxense_languages_is_enabled()) {
+        return PLL()->model->get_languages_list();
+    }
+    return false;
+}
+
+/**
+ * Get the current language by looking at the current HTTP_HOST
+ *
+ * @return null|PLL_Language
+ */
+function cxense_get_current_language()
+{
+    if (cxense_languages_is_enabled()) {
+        return PLL()->model->get_language(pll_current_language());
+    }
+    return null;
+}
+
+/**
+ *  Returns the current locale string or null if languages are not enabled
+ *
+ * @return null|string
+ */
+function cxense_get_current_locale() {
+    $currentLang = cxense_get_current_language();
+    return $currentLang ? $currentLang->locale : null;
 }
 
 
