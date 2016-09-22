@@ -1,5 +1,5 @@
 var CxenseAdmin = new function(){
-    this.addWidget = function() {
+    this.addWidget = function(optionKey, widgetsKey) {
         var parent = document.createElement('tr');
         var row = document.createElement('td');
         var row2 = document.createElement('td');
@@ -11,25 +11,25 @@ var CxenseAdmin = new function(){
         input2.style.width = "100%";
         input3.style.width = "100%";
         input.type='text';
-        input.placeholder = "Nyckel";
+        input.placeholder = "Key";
         input3.placeholder = "Widget";
-        input.name="cxense_widgets_options["+jQuery("#cxense_widgets").children().length+"][key]";
+        input.name = optionKey + "[" + jQuery("#" + widgetsKey).children().length + "][key]";
         input.size = 10;
-        input3.type= 'text';
-        input3.name="cxense_widgets_options["+jQuery("#cxense_widgets").children().length+"][widget_id]";
-        input2.type='button';
+        input3.type = 'text';
+        input3.name = optionKey + "[" + jQuery("#" + widgetsKey ).children().length + "][widget_id]";
+        input2.type = 'button';
         input2.className = "button-secondary";
         input2.onclick = function(){CxenseAdmin.removeWidget(parent);};
-        input2.value='Ta Bort';
+        input2.value = 'Remove';
         row.appendChild(input2);
         parent.appendChild(row);
         row2.appendChild(input);
         parent.appendChild(row2);
         row3.appendChild(input3);
         parent.appendChild(row3);
-        jQuery("#cxense_widgets table").append(parent);
+        jQuery("#" + widgetsKey +  " table").append(parent);
     };
     this.removeWidget = function(parent){
-        if(confirm("Är du säker?"))jQuery(parent).remove();
+        if(confirm("Are you sure?"))jQuery(parent).remove();
     };
 };
