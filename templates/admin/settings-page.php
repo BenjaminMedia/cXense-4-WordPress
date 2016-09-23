@@ -9,6 +9,7 @@
         settings_fields('cxense-settings');
         do_settings_sections('cxense-settings');
 
+        /**
         $languages = cxense_get_languages();
 
         if(!$languages) {
@@ -65,7 +66,7 @@
                 style="margin-top: 12px; margin-bottom: 5px"
             />
 
-        <?php } ?>
+        <?php } **/ ?>
 
         <?php submit_button(); ?>
 

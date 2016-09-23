@@ -18,103 +18,27 @@ function cxense_ping_crawler($post_id) {
  */
 function cxense_output_meta_tags($location=null, $site_name=false, $desc=false, $title=false) {
 
-    $og_tags = array(
-        'og:site_name' => empty($site_name) ? str_replace( 'http://', '',  get_site_url() ) : $site_name,
-        'og:description' => empty($desc) ? cxense_get_opt('CXENSE_DEFAULT_SITE_DESC') : $desc
-    );
-
     if ( is_singular() || is_single() ) {
+
         global $post;
 
-        $recs_tags = array();
-        $og_tags = array(
-            'og:title' => get_the_title(),
-            'og:url' => apply_filters('cxense_og_url', get_permalink())
-        );
+        $recs_tags = [];
 
-        $recommendable_types = cxense_get_opt('cxense_recommendable_post_type');
-        if( !$recommendable_types ) {
-            $recommendable_types = 'post';
-        }
+        // Get organisation prefix
+        $org_prefix = cxense_get_opt('cxense_org_prefix') ? cxense_get_opt('cxense_org_prefix') . '-' : '';
 
-        if( strpos($recommendable_types, $post->post_type) !== false ) {
-            $og_tags['og:type'] = 'article';
-            $og_tags['og:article:published_time'] = date('c', strtotime($post->post_date));
-            $og_tags['og:article:author'] = get_user_by('id', $post->post_author)->display_name;
-            $og_tags['og:description'] = get_the_excerpt();
-            if( empty($og_tags['og:description']) ) {
-                $og_tags['og:description'] = str_replace("\n", ' ', strip_tags($post->post_content));
-            }
-
-            if( mb_strlen($og_tags['og:description'], 'UTF-8') > 75 ) {
-                $og_tags['og:description'] = mb_substr($og_tags['og:description'], 0, 75, 'UTF-8').'...';
-            }
-            if( has_post_thumbnail() ) {
-                list($src, $width, $height) = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'full' );
-                $recs_tags['cXenseParse:recs:image'] = $src;
-                if( $width > 200 && $height > 200 ) {
-                    $og_tags['og:image'] = $src;
-                }
-            } else {
-                $recs_tags['cXenseParse:recs:image'] = 'noimage';
-            }
-
-            $is_recommendable = 'true';
-
-        } else {
-            // Page of some kind
-            $is_recommendable = 'false';
-        }
-
-        $recs_tags['cXenseParse:recs:recommendable'] = apply_filters('cxense_is_recommendable', $is_recommendable);
-
-
-        // Paywall
-        if( defined('PAYGATE_PLUGIN_URL') ) {
-            $recs_tags['cXenseParse:paywall'] = is_paygate_protected($post) ? 'true':'false';
-            $recs_tags['cXenseParse:recs:paywall'] = $recs_tags['cXenseParse:paywall'];
-            if( $recs_tags['cXenseParse:paywall'] == 'true' ) {
-                // For content index search
-                $recs_tags['cXenseParse:recs:custom0'] = 'paywall';
-            }
-        }
-
-        // Post id
+        // Set the ID
         $recs_tags['cXenseParse:recs:articleid'] = $post->ID;
 
-    }
-    else {
-        // Tags/category/search etc....
-        $recs_tags['cXenseParse:recs:recommendable'] = 'false';
-        $og_tags['og:url'] = get_site_url().$_SERVER['REQUEST_URI'];
-        $og_tags['og:type'] = 'website';
-    }
+        // Set the pagetype
+        $recs_tags['cXenseParse:' . $org_prefix . 'pagetype'] = $post->post_type;
 
+        // Set the publish time
+        $recs_tags['cXenseParse:recs:publishtime'] = date('c', strtotime($post->post_date));
 
-    if( empty($og_tags['og:image']) ) {
-        $og_tags['og:image'] = cxense_get_opt('cxense_default_og_image');
-    }
-
-    if( !empty($location) ) {
-        $og_tags['og:url'] = $location;
-    }
-
-    if( !empty($title) ) {
-        $og_tags['og:title'] = $title;
-    }
-
-    // Sanitize stuff
-    foreach(array('og:title', 'og:description') as $tag => $val) {
-        if( !empty($og_tags[$tag]) ) {
-            $og_tags[$tag] = trim(str_replace('"','&quot;', $val));
+        foreach($recs_tags as $name => $val) {
+            echo '<meta name="'.$name.'" content="'.$val.'" />'.PHP_EOL;
         }
-    }
-
-    foreach($og_tags as $name => $val) {
-        echo '<meta property="'.$name.'" content="'.$val.'" />'.PHP_EOL;
-    }
-    foreach($recs_tags as $name => $val) {
-        echo '<meta name="'.$name.'" content="'.$val.'" />'.PHP_EOL;
     }
 }
 
@@ -163,8 +87,9 @@ function cxense_get_opt($name) {
     $locale = cxense_get_current_locale();
 
     if($locale !== null) {
-        $name = '_' . $locale;
+        $name .= '_' . $locale;
     }
+
 
     if( $opt = get_option($name) ) {
         return $opt;
@@ -232,39 +157,18 @@ function cxense_search($query, $args) {
 function cxense_get_settings() {
 
     $baseSettings = [
-        [
-            'name' => 'cxense_site_id', 'title' => 'Site ID'
-        ],
-        [
-            'name' => 'cxense_user_name', 'title' => 'User name'
-        ],
-        [
-            'name' => 'cxense_api_key', 'title' => 'API Key'
-        ],
-        [
-            'name'=>'cxense_generate_og_tags', 'title' => 'Generate og-tags', 'select '=> ['yes' => 'Yes', 'no' => 'No']
-        ],
-        [
-            'name' => 'cxense_add_analytics_script', 'title' => 'Add analytics script', 'select' => ['yes' => 'Yes', 'no' => 'No']
-        ],
-        [
-            'name' => 'cxense_recommendable_post_types', 'title' => 'Recommendable post types (comma separated)'
-        ],
-        [
-            'name' => 'cxense_default_site_desc', 'title' => 'The default website description used in og:description'
-        ],
-        [
-            'name' => 'cxense_default_og_image', 'title' => 'URL to default og:image'
-        ],
-        [
-            'name' => 'cxense_org_prefix', 'title' => 'Organisation prefix'
-        ],
-        [
-            'name' => 'cxense_user_products', 'title' => 'Paywall user products (comma separated string)'
-        ],
-        [
-            'name' => 'cxense_widgets_options', 'title' => 'cxense_widgets_options', 'add_field' => false
-        ],
+        ['name' => 'cxense_add_analytics_script', 'title' => 'Enable cxense analytics (Script and API call)', 'select' => ['yes' => 'Yes', 'no' => 'No']],
+        ['name' => 'cxense_site_id', 'title' => 'Site ID'],
+        ['name' => 'cxense_user_name', 'title' => 'User name'],
+        ['name' => 'cxense_api_key', 'title' => 'API Key'],
+        ['name' => 'cxense_org_prefix', 'title' => 'Organisation prefix'],
+
+        //['name' => 'cxense_recommendable_post_types', 'title' => 'Recommendable post types (comma separated)'],
+        //['name'=>'cxense_generate_og_tags', 'title' => 'Generate og-tags', 'select '=> ['yes' => 'Yes', 'no' => 'No']],
+        //['name' => 'cxense_default_site_desc', 'title' => 'The default website description used in og:description'],
+        //['name' => 'cxense_default_og_image', 'title' => 'URL to default og:image'],
+        //['name' => 'cxense_user_products', 'title' => 'Paywall user products (comma separated string)'],
+        //['name' => 'cxense_widgets_options', 'title' => 'cxense_widgets_options', 'add_field' => false],
     ];
 
 

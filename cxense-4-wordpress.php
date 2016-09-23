@@ -54,8 +54,13 @@ if( is_admin() ) {
 
     add_action('admin_init', function() {
 
-        // Ping crawler when post is changed
-        add_action('save_post', 'cxense_ping_crawler');
+        if( cxense_get_opt('cxense_add_analytics_script') === 'yes' ) {
+
+            // Ping crawler when post is changed
+            add_action('save_post', 'cxense_ping_crawler');
+
+        }
+
         add_action('delete_post', 'cxense_ping_crawler');
 
         // Register our settings
@@ -69,14 +74,17 @@ if( is_admin() ) {
 
     /* * * * * Manually triggering page view  * * * */
 
-    add_filter('request', function($req) {
-        if( strpos($_SERVER['REQUEST_URI'], '/cxense-event/') !== false )  {
-            require __DIR__.'/templates/cx-event.php';
-            die;
-        }
-        return $req;
-    });
+    if( cxense_get_opt('cxense_add_analytics_script') === 'yes' ) {
 
+        add_filter('request', function ($req) {
+            if (strpos($_SERVER['REQUEST_URI'], '/cxense-event/') !== false) {
+                require __DIR__ . '/templates/cx-event.php';
+                die;
+            }
+            return $req;
+        });
+
+    }
 
     /* * * * * Plugin theme stuff * * * */
 
@@ -91,7 +99,7 @@ if( is_admin() ) {
             }
 
             // Add analytics script
-            if( cxense_get_opt('cxense_add_analytics_script') != 'no' ) {
+            if( cxense_get_opt('cxense_add_analytics_script') === 'yes' ) {
                 add_action('wp_footer', 'cxense_analytics_script');
             }
         }
